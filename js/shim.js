@@ -53,6 +53,10 @@
     if (res.status === 401) { FIN.clearToken(); throw new Error('Přihlášení vypršelo – přihlas se znovu.'); }
     if (!res.ok) {
       var t = await res.text();
+      if (res.status === 403 && /insufficient authentication scopes/i.test(t)) {
+        FIN.clearToken(); FIN.LS.del('fin-email'); FIN.LS.set('fin-force-consent', '1');
+        var e = new Error('Chybí povolení k tabulkám – přihlas se znovu a povol přístup k Tabulkám Google.'); e.needLogin = true; throw e;
+      }
       var msg = t; try { msg = JSON.parse(t).error.message; } catch (e) {}
       throw new Error('Google Tabulky: ' + msg);
     }

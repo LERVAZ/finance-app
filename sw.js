@@ -1,5 +1,5 @@
 /* Service worker: aplikace se otevře i bez signálu (data z tabulky se ale načítají vždy online, nic citlivého se neukládá). */
-var CACHE = 'finance-v1';
+var CACHE = 'finance-v2';
 var FILES = ['./', 'index.html', 'css/base.css', 'js/config.js', 'js/auth.js', 'js/shim.js', 'js/logic.js', 'js/core.js', 'js/ui.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); })); self.skipWaiting(); });

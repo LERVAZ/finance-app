@@ -45,6 +45,11 @@
           hint: LS.get('fin-email') || undefined,
           callback: function (resp) {
             if (resp.error) return reject(new Error('Přihlášení se nepovedlo: ' + resp.error));
+            if (!google.accounts.oauth2.hasGrantedAllScopes(resp, C.scope)) {
+              LS.del('fin-email'); LS.set('fin-force-consent', '1');
+              return reject(new Error('Google nepovolil přístup k tabulkám. Přihlas se znovu a na stránce Googlu zaškrtni políčko „Zobrazit, upravit, vytvořit a smazat tabulky Google“.'));
+            }
+            LS.del('fin-force-consent');
             LS.set('fin-token', resp.access_token);
             LS.set('fin-token-exp', String(Date.now() + (resp.expires_in || 3600) * 1000));
             fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + resp.access_token } })
@@ -53,7 +58,7 @@
           },
           error_callback: function (err) { reject(new Error(err && err.type === 'popup_closed' ? 'Okno přihlášení bylo zavřeno.' : 'Přihlášení se nepovedlo.')); }
         });
-        client.requestAccessToken({ prompt: LS.get('fin-email') ? '' : 'consent' });
+        client.requestAccessToken({ prompt: LS.get('fin-email') && !LS.get('fin-force-consent') ? '' : 'consent' });
       });
     });
   };

@@ -16,7 +16,7 @@
         setBusy(true);
         FIN.call(n, arg).then(function (d) { setBusy(false); ok(d); }, function (e) {
           setBusy(false);
-          if (e && e.needLogin) { showLogin(); return; }
+          if (e && e.needLogin) { showLogin(e.message); return; }
           bad(e);
         });
       };
@@ -369,9 +369,9 @@
       FIN.lockVerify().then(function () { locked = false; start(); }, function () { document.getElementById('ovMsg').textContent = 'Ověření se nepovedlo, zkus to znovu.'; });
     };
   }
-  function showLogin() {
+  function showLogin(msg) {
     showOverlay(lockIcon + '<h1>Finance</h1><p class="muted">Přihlas se Google účtem, pod kterým máš tabulku s financemi.</p>' +
-      '<button id="loginBtn" class="wide">Přihlásit přes Google</button><p id="ovMsg" class="status err"></p>');
+      '<button id="loginBtn" class="wide">Přihlásit přes Google</button><p id="ovMsg" class="status err">' + (typeof msg === 'string' ? esc(msg) : '') + '</p>');
     document.getElementById('loginBtn').onclick = function () {
       FIN.login().then(function () { hideOverlay(); load(); }, function (e) { document.getElementById('ovMsg').textContent = e.message; });
     };
