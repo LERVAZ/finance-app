@@ -386,9 +386,9 @@ function mesicHtml(M, opts) {
     mt('Výplata / příjmy', kc(C.prijmy) + (C.odhad ? ' <span class="small muted">odhad</span>' : '') , 'var(--green)') +
     mt('Trvalé platby (odešlo)', '−' + kc(C.trvDone) + (C.trvDone < C.trvSum ? '<span class="small muted" style="display:block">ještě čeká −' + kc(C.trvSum - C.trvDone) + '</span>' : ''), 'var(--ink)') +
     mt('Ostatní výdaje', '−' + kc(C.vydaje), C.vydaje ? 'var(--red)' : 'var(--ink)') +
-    mt('Minulé období', sk(P.zbyvaTed) + '<span class="small muted" style="display:block">' + (P.zbyvaTed < 0 ? 'utraceno navíc' : 'zbylo') + ' · ' + esc(P.b.label) + '</span>', P.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
-    mt('Zbývá z výplaty teď', sk(C.zbyvaTed) + (C.trvDone < C.trvSum ? '<span class="small muted" style="display:block">po všech trvalých ' + sk(C.zbyva) + '</span>' : ''), C.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
-    mt('Na spořicí přibylo', sk(C.bilance), C.bilance >= 0 ? 'var(--c-blue)' : 'var(--red)') +
+    mt('Předchozí období', sk(P.zbyvaTed) + '<span class="small muted" style="display:block">' + (P.zbyvaTed < 0 ? 'utraceno navíc' : 'zbylo') + ' · ' + esc(P.b.label) + '</span><span class="small muted" style="display:block">na spořicí přibylo ' + sk(P.bilance) + '</span>', P.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
+    mt(key === curKey ? 'Zbývá z výplaty teď' : (C.zbyvaTed < 0 ? 'Utraceno navíc' : 'Zbylo z výplaty'), sk(C.zbyvaTed) + (C.trvDone < C.trvSum ? '<span class="small muted" style="display:block">po všech trvalých ' + sk(C.zbyva) + '</span>' : ''), C.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
+    mt('Na spořicí přibylo' + (key === curKey ? ' od výplaty' : ' za období'), sk(C.bilance), C.bilance >= 0 ? 'var(--c-blue)' : 'var(--red)') +
     mt('Spořicí účet ČS teď', kc(M.sporici), 'var(--c-blue)') + '</div>';
   var naBeznem = C.zbyva - (C.naSp - C.zeSp);
   h += '<div class="small muted">Zbývá ' + sk(C.zbyva) + ' = na spořicím z tohoto období <b class="num ' + cls(C.naSp - C.zeSp) + '">' + sk(C.naSp - C.zeSp) + '</b> + na běžném účtu <b class="num ' + cls(naBeznem) + '">' + sk(naBeznem) + '</b>' +

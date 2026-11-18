@@ -121,11 +121,11 @@
       var big2 = function (lab, v, sub) { return '<div style="flex:1;min-width:140px"><div class="muted small">' + lab + '</div><div class="big num ' + cls(v) + '">' + sk(v) + '</div><div class="muted small">' + sub + '</div></div>'; };
       g += card('c-green', 'Výplata',
         '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
-        big2('Minulé období', P.zbyvaTed, (P.zbyvaTed < 0 ? 'utraceno navíc' : 'zbylo') + ' · ' + esc(P.b.label)) +
+        big2('Minulé období', P.zbyvaTed, (P.zbyvaTed < 0 ? 'utraceno navíc' : 'zbylo') + ' · ' + esc(P.b.label) + '<br>na spořicí přibylo <b class="num ' + cls(P.bilance) + '">' + sk(P.bilance) + '</b>') +
         big2('Zbývá z výplaty teď', C.zbyvaTed, 'z ' + kc(C.prijmy) + (C.odhad ? ' (odhad)' : '') + ' · od ' + esc(C.b.label.split(' – ')[0])) + '</div>' +
         '<div class="split"><span>trvalé odešlo <b class="num">−' + kc(C.trvDone) + '</b></span><span>útraty <b class="num ' + (C.vydaje ? 'neg' : '') + '">' + (C.vydaje ? '−' : '') + kc(C.vydaje) + '</b></span>' +
         (C.trvDone < C.trvSum ? '<span>po všech trvalých <b class="num ' + cls(C.zbyva) + '">' + sk(C.zbyva) + '</b></span>' : '') + '</div>' +
-        '<div class="split"><span>na spořicí přibylo <b class="num ' + cls(C.bilance) + '">' + sk(C.bilance) + '</b></span></div>' +
+        '<div class="split"><span>na spořicí přibylo od výplaty <b class="num ' + cls(C.bilance) + '">' + sk(C.bilance) + '</b></span></div>' +
         '<button class="btn2 slim" onclick="setTab(\'utraty\')">Útraty za měsíc →</button>');
     }
     // spořicí účty po položkách
