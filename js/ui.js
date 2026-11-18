@@ -116,11 +116,11 @@
       '<div class="small">Spoření a investice <b class="num">' + kc(k.sporeni) + '</b> <span class="' + cls(zm) + '">' + sk(zm) + '</span> od ' + esc(D.previous || '') + '</div>');
     var C = curPeriod(D);
     if (C) {
-      var P = prevPeriod(D), vd = C.vyplata && P.vyplata ? C.vyplata - P.vyplata : null;
+      var P = prevPeriod(D);
       g += card('c-green', 'Od poslední výplaty', '<div class="big num ' + cls(C.bilance) + '">' + sk(C.bilance) + '</div>' +
-        '<div class="muted small">na spořicí od výplaty · ' + esc(C.b.label) + (C.odhad ? ' · výplata zatím nezapsaná' : '') + '</div>' +
-        '<div class="split"><span>minulé období <b class="num ' + cls(P.bilance) + '">' + sk(P.bilance) + '</b></span>' +
-        (C.vyplata ? '<span>výplata <b class="num">' + kc(C.vyplata) + '</b>' + (vd !== null ? ' <span class="' + cls(vd) + '">(' + (vd ? sk(vd) : 'stejně') + ')</span>' : '') + '</span>' : '') + '</div>' +
+        '<div class="muted small">' + (C.bilance < 0 ? 'dorovnáno ze spořicího' : 'zbylo z výplaty na spořicím') + ' · ' + esc(C.b.label) + (C.odhad ? ' · výplata zatím nezapsaná' : '') + '</div>' +
+        '<div class="split"><span>minulé období (' + esc(P.b.label) + ') ' + (P.bilance < 0 ? 'dorovnáno' : 'zbylo') + ' <b class="num ' + cls(P.bilance) + '">' + sk(P.bilance) + '</b></span>' +
+        '</div>' +
         '<div class="split"><span>útraty <b class="num ' + (C.vydaje ? 'neg' : '') + '">' + (C.vydaje ? '−' : '') + kc(C.vydaje) + '</b></span><span>trvalé <b class="num">−' + kc(C.trvSum) + '</b></span><span>zbývá z výplaty <b class="num ' + cls(C.zbyva) + '">' + sk(C.zbyva) + '</b></span></div>' +
         '<button class="btn2 slim" onclick="setTab(\'utraty\')">Útraty za měsíc →</button>');
     }

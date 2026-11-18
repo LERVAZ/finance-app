@@ -381,13 +381,11 @@ function mesicHtml(M, opts) {
   });
   h += '</select></div></div>';
   var P = mesicCalc(M, prevKey(key));
-  var vypDiff = C.vyplata && P.vyplata ? C.vyplata - P.vyplata : null;
   h += '<div class="mtiles">' +
-    mt('Výplata / příjmy', kc(C.prijmy) + (C.odhad ? ' <span class="small muted">odhad</span>' : '') +
-      (vypDiff !== null ? '<span class="small ' + cls(vypDiff) + '" style="display:block">' + (vypDiff ? sk(vypDiff) : 'stejně') + ' proti minulé výplatě</span>' : ''), 'var(--green)') +
+    mt('Výplata / příjmy', kc(C.prijmy) + (C.odhad ? ' <span class="small muted">odhad</span>' : '') , 'var(--green)') +
     mt('Trvalé platby z výplaty', '−' + kc(C.trvSum), 'var(--ink)') +
     mt('Ostatní výdaje', '−' + kc(C.vydaje), C.vydaje ? 'var(--red)' : 'var(--ink)') +
-    mt('Na spořicí od výplaty', sk(C.bilance) + '<span class="small muted" style="display:block">minulé období ' + sk(P.bilance) + '</span>', C.bilance >= 0 ? 'var(--green)' : 'var(--red)') +
+    mt(C.bilance < 0 ? 'Dorovnáno ze spořicího' : 'Zbylo z výplaty (na spořicím)', sk(C.bilance) + '<span class="small muted" style="display:block">minulé období ' + sk(P.bilance) + '</span>', C.bilance >= 0 ? 'var(--green)' : 'var(--red)') +
     mt('Spořicí účet ČS teď', kc(M.sporici), 'var(--c-blue)') +
     mt('Zbývá z výplaty', sk(C.zbyva), C.zbyva >= 0 ? 'var(--green)' : 'var(--red)') + '</div>';
   var naBeznem = C.zbyva - (C.naSp - C.zeSp);
