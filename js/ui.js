@@ -117,11 +117,13 @@
     var C = curPeriod(D);
     if (C) {
       var P = prevPeriod(D);
-      g += card('c-green', 'Od poslední výplaty', '<div class="big num ' + cls(C.bilance) + '">' + sk(C.bilance) + '</div>' +
-        '<div class="muted small">' + (C.bilance < 0 ? 'dorovnáno ze spořicího' : 'zbylo z výplaty na spořicím') + ' · ' + esc(C.b.label) + (C.odhad ? ' · výplata zatím nezapsaná' : '') + '</div>' +
-        '<div class="split"><span>minulé období (' + esc(P.b.label) + ') ' + (P.bilance < 0 ? 'dorovnáno' : 'zbylo') + ' <b class="num ' + cls(P.bilance) + '">' + sk(P.bilance) + '</b></span>' +
-        '</div>' +
-        '<div class="split"><span>útraty <b class="num ' + (C.vydaje ? 'neg' : '') + '">' + (C.vydaje ? '−' : '') + kc(C.vydaje) + '</b></span><span>trvalé <b class="num">−' + kc(C.trvSum) + '</b></span><span>zbývá z výplaty <b class="num ' + cls(C.zbyva) + '">' + sk(C.zbyva) + '</b></span></div>' +
+      var fin = function (v) { return v < 0 ? 'utraceno navíc' : 'zbylo'; };
+      g += card('c-green', 'Od poslední výplaty', '<div class="big num ' + cls(C.zbyvaTed) + '">' + sk(C.zbyvaTed) + '</div>' +
+        '<div class="muted small">zbývá z výplaty ' + (C.prijmy ? kc(C.prijmy) : '') + (C.odhad ? ' (odhad, výplata nezapsaná)' : '') + ' · ' + esc(C.b.label) + '</div>' +
+        '<div class="split"><span>trvalé odešlo <b class="num">−' + kc(C.trvDone) + '</b></span><span>útraty <b class="num ' + (C.vydaje ? 'neg' : '') + '">' + (C.vydaje ? '−' : '') + kc(C.vydaje) + '</b></span>' +
+        (C.trvDone < C.trvSum ? '<span>po všech trvalých <b class="num ' + cls(C.zbyva) + '">' + sk(C.zbyva) + '</b></span>' : '') + '</div>' +
+        '<div class="split"><span>na spořicí přibylo <b class="num ' + cls(C.bilance) + '">' + sk(C.bilance) + '</b></span>' +
+        '<span>minulé období ' + fin(P.zbyvaTed) + ' <b class="num ' + cls(P.zbyvaTed) + '">' + sk(P.zbyvaTed) + '</b></span></div>' +
         '<button class="btn2 slim" onclick="setTab(\'utraty\')">Útraty za měsíc →</button>');
     }
     // spořicí účty po položkách

@@ -354,6 +354,7 @@ function mesicCalc(M, key) {
   var odhad = false;
   if (!prijmy && M.vyplataOcekavana) { prijmy = M.vyplataOcekavana; odhad = true; }
   var trvSum = sum(trv, function () { return true; });
+  var trvDone = sum(trv, function (x) { return x.done; });
   var vydaje = sum(poh, function (p) { return p.typ === 'Výdaj' || p.typ === 'Ze spořicího'; });
   var naSp = sum(poh, function (p) { return p.typ === 'Na spořicí'; }), zeSp = sum(poh, function (p) { return p.typ === 'Ze spořicího' || p.typ === 'Převod ze spořicího'; });
   var cats = {};
@@ -362,7 +363,7 @@ function mesicCalc(M, key) {
   var rb = M.trvale.filter(function (x) { return x.ucet === 'Raiffeisen'; });
   var rbIn = sum(rb, function (x) { return x.typ === 'Příjem'; }) + sum(M.trvale.filter(function (x) { return x.ucet !== 'Raiffeisen' && /raiffeisen/i.test(x.name); }), function () { return true; });
   var rbOut = sum(rb, function (x) { return x.typ !== 'Příjem'; });
-  return { b: b, trv: trv, poh: poh, prijmy: prijmy, vyplata: vyplata, bilance: naSp - zeSp, odhad: odhad, trvSum: trvSum, vydaje: vydaje, zbyva: prijmy - trvSum - vydaje,
+  return { b: b, trv: trv, poh: poh, prijmy: prijmy, vyplata: vyplata, bilance: naSp - zeSp, odhad: odhad, trvSum: trvSum, vydaje: vydaje, zbyva: prijmy - trvSum - vydaje, trvDone: trvDone, zbyvaTed: prijmy - trvDone - vydaje,
            naSp: naSp, zeSp: zeSp, cats: cats, rb: rb, rbIn: rbIn, rbOut: rbOut };
 }
 function mesicHtml(M, opts) {
@@ -383,11 +384,11 @@ function mesicHtml(M, opts) {
   var P = mesicCalc(M, prevKey(key));
   h += '<div class="mtiles">' +
     mt('Výplata / příjmy', kc(C.prijmy) + (C.odhad ? ' <span class="small muted">odhad</span>' : '') , 'var(--green)') +
-    mt('Trvalé platby z výplaty', '−' + kc(C.trvSum), 'var(--ink)') +
+    mt('Trvalé platby (odešlo)', '−' + kc(C.trvDone) + (C.trvDone < C.trvSum ? '<span class="small muted" style="display:block">ještě čeká −' + kc(C.trvSum - C.trvDone) + '</span>' : ''), 'var(--ink)') +
     mt('Ostatní výdaje', '−' + kc(C.vydaje), C.vydaje ? 'var(--red)' : 'var(--ink)') +
-    mt(C.bilance < 0 ? 'Dorovnáno ze spořicího' : 'Zbylo z výplaty (na spořicím)', sk(C.bilance) + '<span class="small muted" style="display:block">minulé období ' + sk(P.bilance) + '</span>', C.bilance >= 0 ? 'var(--green)' : 'var(--red)') +
-    mt('Spořicí účet ČS teď', kc(M.sporici), 'var(--c-blue)') +
-    mt('Zbývá z výplaty', sk(C.zbyva), C.zbyva >= 0 ? 'var(--green)' : 'var(--red)') + '</div>';
+    mt('Zbývá z výplaty', sk(C.zbyvaTed) + '<span class="small muted" style="display:block">' + (C.trvDone < C.trvSum ? 'po všech trvalých ' + sk(C.zbyva) + ' · ' : '') + 'minulé období ' + sk(P.zbyvaTed) + '</span>', C.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
+    mt('Na spořicí přibylo', sk(C.bilance), C.bilance >= 0 ? 'var(--c-blue)' : 'var(--red)') +
+    mt('Spořicí účet ČS teď', kc(M.sporici), 'var(--c-blue)') + '</div>';
   var naBeznem = C.zbyva - (C.naSp - C.zeSp);
   h += '<div class="small muted">Zbývá ' + sk(C.zbyva) + ' = na spořicím z tohoto období <b class="num ' + cls(C.naSp - C.zeSp) + '">' + sk(C.naSp - C.zeSp) + '</b> + na běžném účtu <b class="num ' + cls(naBeznem) + '">' + sk(naBeznem) + '</b>' +
     (C.odhad ? ' (výplata je zatím jen odhad)' : '') + '.</div>';
