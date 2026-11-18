@@ -67,9 +67,18 @@
     return '<div class="lrow"><span class="n">' + name + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' +
       '<span class="v"><span class="num">' + val + '</span>' + (val2 ? '<span class="num small ' + (val2cls || '') + '">' + val2 + '</span>' : '') + '</span></div>';
   }
+  // měsíční úrok spořicího účtu: z tabulky, a když chybí, zůstatek × sazba / 12 po 15% dani
+  function urokMes(bal, s) { if (s.urok && bal) return Math.round(bal * s.urok / 12 * 0.85); return typeof s.mesicne === 'number' && isFinite(s.mesicne) ? Math.round(s.mesicne) : 0; }
+  function monthLabel(D) {
+    var k = D.form && D.form.targetKey, m = (D.form.months || []).filter(function (x) { return x.key === k; })[0];
+    var lab = m ? String(m.label) : '';
+    var mm = lab.match(/^(\d{1,2})\/(\d{4})/); if (mm) lab = MONTHS[+mm[1] - 1] + ' ' + mm[2];
+    return 'za ' + (lab || 'poslední měsíc');
+  }
   function fieldMap(D) { var m = {}; D.form.fields.forEach(function (f) { m[f.key] = f; }); return m; }
   function invRow(D, start) { return D.investice.filter(function (r) { return String(r.name).indexOf(start) === 0; })[0] || {}; }
-  function curPeriod(D) { return D.mesic ? mesicCalc(D.mesic, mPeriodKey(D.mesic.dnes, D.mesic.vyplataDen)) : null; }
+  function curPeriod(D) { return D.mesic ? mesicCalc(D.mesic, mPeriodKey(D.mesic.dnes, D.mesic)) : null; }
+  function prevPeriod(D) { return D.mesic ? mesicCalc(D.mesic, prevKey(mPeriodKey(D.mesic.dnes, D.mesic))) : null; }
 
   // ---------- render ----------
   window.render = function (D) {
@@ -107,9 +116,12 @@
       '<div class="small">Spoření a investice <b class="num">' + kc(k.sporeni) + '</b> <span class="' + cls(zm) + '">' + sk(zm) + '</span> od ' + esc(D.previous || '') + '</div>');
     var C = curPeriod(D);
     if (C) {
-      g += card('c-green', 'Tento měsíc', '<div class="big num ' + cls(C.zbyva) + '">' + sk(C.zbyva) + '</div>' +
-        '<div class="muted small">zbývá · ' + esc(C.b.label) + (C.odhad ? ' · výplata odhadem' : '') + '</div>' +
-        '<div class="split"><span>útraty <b class="num ' + (C.vydaje ? 'neg' : '') + '">' + (C.vydaje ? '−' : '') + kc(C.vydaje) + '</b></span><span>trvalé <b class="num">−' + kc(C.trvSum) + '</b></span></div>' +
+      var P = prevPeriod(D), vd = C.vyplata && P.vyplata ? C.vyplata - P.vyplata : null;
+      g += card('c-green', 'Od poslední výplaty', '<div class="big num ' + cls(C.bilance) + '">' + sk(C.bilance) + '</div>' +
+        '<div class="muted small">na spořicí od výplaty · ' + esc(C.b.label) + (C.odhad ? ' · výplata zatím nezapsaná' : '') + '</div>' +
+        '<div class="split"><span>minulé období <b class="num ' + cls(P.bilance) + '">' + sk(P.bilance) + '</b></span>' +
+        (C.vyplata ? '<span>výplata <b class="num">' + kc(C.vyplata) + '</b>' + (vd !== null ? ' <span class="' + cls(vd) + '">(' + (vd ? sk(vd) : 'stejně') + ')</span>' : '') + '</span>' : '') + '</div>' +
+        '<div class="split"><span>útraty <b class="num ' + (C.vydaje ? 'neg' : '') + '">' + (C.vydaje ? '−' : '') + kc(C.vydaje) + '</b></span><span>trvalé <b class="num">−' + kc(C.trvSum) + '</b></span><span>zbývá z výplaty <b class="num ' + cls(C.zbyva) + '">' + sk(C.zbyva) + '</b></span></div>' +
         '<button class="btn2 slim" onclick="setTab(\'utraty\')">Útraty za měsíc →</button>');
     }
     // spořicí účty po položkách
@@ -118,26 +130,32 @@
     var s0 = D.sporici[0] || {}, s1 = D.sporici[1] || {};
     var spTot = (sp || 0) + (s1.zustatek || 0) + (st.nasporeno || 0);
     g += card('c-blue', 'Spořicí účty',
-      lrow('ČS spořicí účet', 'úrok ' + pct(s0.urok, 1).replace('+', '') + ' · cca ' + kc(s0.mesicne) + '/měs.', kc(sp)) +
-      lrow('RB spořicí účet', 'úrok ' + pct(s1.urok, 1).replace('+', '') + ' · cca ' + kc(s1.mesicne) + '/měs.', kc(s1.zustatek)) +
+      lrow('ČS spořicí účet', 'úrok ' + pct(s0.urok, 1).replace('+', '') + ' · ke konci měsíce cca ' + kc((sp || 0) + urokMes(sp, s0)), kc(sp), '+' + kc(urokMes(sp, s0)) + ' úrok', 'pos') +
+      lrow('RB spořicí účet', 'úrok ' + pct(s1.urok, 1).replace('+', '') + ' · ke konci měsíce cca ' + kc((s1.zustatek || 0) + urokMes(s1.zustatek, s1)), kc(s1.zustatek), '+' + kc(urokMes(s1.zustatek, s1)) + ' úrok', 'pos') +
       lrow('Stavební spoření', 'cíl ' + kc(st.cil) + ' · ' + pct(st.splneno, 1).replace('+', ''), kc(st.nasporeno)),
       '<span class="num">' + kc(spTot) + '</span>');
     // investice po položkách
     var bz = D.bicz, cs = invRow(D, 'ČS fondy'), jt = invRow(D, 'J&T'), nn = invRow(D, 'NN');
     var invTot = (bz.vlozeno || 0) + (jt.hodnota || 0) + (cs.hodnota || 0) + (nn.hodnota || 0);
     var gl = function (z, p) { return z === null || z === undefined ? '' : sk(z) + (p === null || p === undefined ? '' : ' · ' + pct(p, 1)); };
+    var mLab = monthLabel(D);
+    var mz = function (key, r) {
+      var f = F[key]; if (!f || typeof f.change !== 'number' || !isFinite(f.change) || f.prev === null) return '';
+      return '<span class="' + cls(f.change) + '">' + mLab + ' ' + sk(f.change) + '</span>' + (r && typeof r.mesic === 'number' ? ' · výkon ' + pct(r.mesic, 1) : '');
+    };
     g += card('c-teal', 'Investice',
-      lrow('BICZ', 'pevný výnos · splatnost ' + esc(bz.splatnost || ''), kc(bz.vlozeno), gl(bz.vydelano, bz.vydelanoPct), cls(bz.vydelano)) +
-      lrow('J&T Banka', 'vloženo ' + kc(jt.vlozeno), kc(jt.hodnota), gl(jt.zisk, jt.ziskPct), cls(jt.zisk)) +
-      lrow('ČS fondy', 'vloženo ' + kc(cs.vlozeno), kc(cs.hodnota), gl(cs.zisk, cs.ziskPct), cls(cs.zisk)) +
-      lrow('NN životní pojištění', nn.vlozeno ? 'zaplaceno cca ' + kc(nn.vlozeno) : 'odkupné', kc(nn.hodnota), gl(nn.zisk, nn.ziskPct), cls(nn.zisk)),
+      '<div class="muted small">stav ke konci měsíce · ' + esc(mLab.replace('za ', '')) + '</div>' +
+      lrow('BICZ', 'pevný výnos · splatnost ' + esc(bz.splatnost || '') + ' · letos ' + kc(bz.letos), kc(bz.vlozeno), gl(bz.vydelano, bz.vydelanoPct), cls(bz.vydelano)) +
+      lrow('J&T Banka', mz('jt', jt) || 'vloženo ' + kc(jt.vlozeno), kc(jt.hodnota), gl(jt.zisk, jt.ziskPct), cls(jt.zisk)) +
+      lrow('ČS fondy', mz('csFondy', cs) || 'vloženo ' + kc(cs.vlozeno), kc(cs.hodnota), gl(cs.zisk, cs.ziskPct), cls(cs.zisk)) +
+      lrow('NN životní pojištění', mz('nn', null) || 'odkupné', kc(nn.hodnota), gl(nn.zisk, nn.ziskPct), cls(nn.zisk)),
       '<span class="num">' + kc(invTot) + '</span>');
     // nejbližší platby
     if (C) {
       var up = C.trv.filter(function (x) { return !x.done && x.datum; }).slice(0, 5).map(function (x) {
         return '<div class="mrow"><span class="d">' + fmtD(x.datum) + '</span><span class="n">' + esc(x.name) + '</span><span class="a">−' + kc(x.castka) + '</span></div>';
       });
-      up.push('<div class="mrow"><span class="d">' + fmtD(C.b.ny + '-' + pad2(C.b.nm) + '-' + pad2(D.mesic.vyplataDen)) + '</span><span class="n">Výplata</span><span class="a pos">+' + kc(D.mesic.vyplataOcekavana) + '</span></div>');
+      up.push('<div class="mrow"><span class="d">' + fmtD(C.b.next) + '</span><span class="n">Výplata</span><span class="a pos">+' + kc(D.mesic.vyplataOcekavana) + '</span></div>');
       g += card('c-amber', 'Nejbližší platby', '<div class="mlist">' + up.join('') + '</div>');
     }
     var p = Math.max(0, Math.min(1, st.splneno || 0));

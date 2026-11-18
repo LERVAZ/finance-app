@@ -301,21 +301,43 @@ function kvr(l, v) { return '<div class="kvr"><span>' + l + '</span><span>' + v 
 var MCATS = ['Jídlo', 'Domácnost', 'Telefon', 'Dítě', 'Auto', 'Zdraví', 'Oblečení', 'Zábava', 'Dárky', 'Bydlení', 'Ostatní'];
 var MTYPES = [['Ze spořicího', 'Výdaj ze spořicího'], ['Výdaj', 'Výdaj z běžného účtu'], ['Na spořicí', 'Převod na spořicí'], ['Převod ze spořicího', 'Převod ze spořicího (na trvalé platby)'], ['Příjem', 'Příjem (výplata apod.)']];
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
-function mPeriodKey(ds, payDay) {
+// ---------- období od výplaty do výplaty ----------
+// Začátek období = den, kdy výplata skutečně přišla (zapsaný Příjem „Výplata…“ v okolí výplatního dne).
+// Když výplata v daném měsíci zapsaná není, bere se nastavený výplatní den (20.).
+function payM_(M) { return typeof M === 'number' ? { vyplataDen: M, pohyby: [] } : M; }
+function isSalary(p, M) {
+  if (p.typ !== 'Příjem') return false;
+  if (/výplat|vyplat|mzda|\bplat\b/i.test(p.popis || '')) return true;
+  return !/bicz|výnos|vynos|úrok|urok/i.test(p.popis || '') && M.vyplataOcekavana && p.castka >= 0.6 * M.vyplataOcekavana;
+}
+function dShift(ds, n) { var p = ds.split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)); return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()); }
+function payStart(M, y, m) {
+  M = payM_(M);
+  while (m < 1) { m += 12; y -= 1; } while (m > 12) { m -= 12; y += 1; }
+  var nom = y + '-' + pad2(m) + '-' + pad2(M.vyplataDen), lo = dShift(nom, -10), hi = dShift(nom, 10), best = null;
+  (M.pohyby || []).forEach(function (p) { if (p.datum >= lo && p.datum <= hi && isSalary(p, M) && (!best || p.datum < best)) best = p.datum; });
+  return { date: best || nom, real: !!best };
+}
+function mPeriodKey(ds, M) {
   var p = ds.split('-').map(Number), y = p[0], m = p[1];
-  if (p[2] < payDay) { m -= 1; if (m < 1) { m = 12; y -= 1; } }
+  if (payStart(M, y, m + 1).date <= ds) { m += 1; }            // výplata přišla už v předchozím měsíci (např. 30.)
+  else if (ds < payStart(M, y, m).date) { m -= 1; }
+  while (m < 1) { m += 12; y -= 1; } while (m > 12) { m -= 12; y += 1; }
   return y + '-' + pad2(m);
 }
-function mPeriodBounds(key, payDay) {
+function mPeriodBounds(key, M) {
   var p = key.split('-').map(Number), y = p[0], m = p[1];
   var ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1;
-  return { start: y + '-' + pad2(m) + '-' + pad2(payDay), end: ny + '-' + pad2(nm) + '-' + pad2(payDay - 1),
-           y: y, m: m, ny: ny, nm: nm, label: payDay + '. ' + m + '. – ' + (payDay - 1) + '. ' + nm + '. ' + ny };
+  var s0 = payStart(M, y, m), s1 = payStart(M, ny, nm), end = dShift(s1.date, -1);
+  var lab = function (ds, yr) { var q = ds.split('-').map(Number); return q[2] + '. ' + q[1] + '.' + (yr ? ' ' + q[0] : ''); };
+  return { start: s0.date, end: end, next: s1.date, nextReal: s1.real, startReal: s0.real,
+           y: y, m: m, ny: ny, nm: nm, label: lab(s0.date) + ' – ' + lab(end, true) };
 }
+function prevKey(key) { var p = key.split('-').map(Number), y = p[0], m = p[1] - 1; if (m < 1) { m = 12; y -= 1; } return y + '-' + pad2(m); }
 var MONTHS = ['leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
 function fmtD(ds) { var p = ds.split('-'); return Number(p[2]) + '. ' + Number(p[1]) + '.'; }
 function mesicCalc(M, key) {
-  var b = mPeriodBounds(key, M.vyplataDen);
+  var b = mPeriodBounds(key, M);
   var trv = M.trvale.filter(function (x) { return x.ucet !== 'Raiffeisen'; }).map(function (x) {
     var ds = null;
     if (x.den) {
@@ -323,11 +345,12 @@ function mesicCalc(M, key) {
       var last = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
       ds = yy + '-' + pad2(mm) + '-' + pad2(Math.min(x.den, last));
     }
-    return { name: x.name, castka: x.castka, kategorie: x.kategorie, typ: x.typ, poznamka: x.poznamka, datum: ds, done: ds ? ds <= M.dnes : key < mPeriodKey(M.dnes, M.vyplataDen) };
+    return { name: x.name, castka: x.castka, kategorie: x.kategorie, typ: x.typ, poznamka: x.poznamka, datum: ds, done: ds ? ds <= M.dnes : key < mPeriodKey(M.dnes, M) };
   }).sort(function (a, b2) { return (a.datum || '9') < (b2.datum || '9') ? -1 : 1; });
   var poh = M.pohyby.filter(function (p) { return p.datum >= b.start && p.datum <= b.end; }).sort(function (a, b2) { return a.datum < b2.datum ? 1 : -1; });
   var sum = function (arr, f) { return arr.filter(f).reduce(function (s, x) { return s + x.castka; }, 0); };
   var prijmy = sum(poh, function (p) { return p.typ === 'Příjem'; });
+  var vyplata = sum(poh, function (p) { return isSalary(p, M); });
   var odhad = false;
   if (!prijmy && M.vyplataOcekavana) { prijmy = M.vyplataOcekavana; odhad = true; }
   var trvSum = sum(trv, function () { return true; });
@@ -339,11 +362,11 @@ function mesicCalc(M, key) {
   var rb = M.trvale.filter(function (x) { return x.ucet === 'Raiffeisen'; });
   var rbIn = sum(rb, function (x) { return x.typ === 'Příjem'; }) + sum(M.trvale.filter(function (x) { return x.ucet !== 'Raiffeisen' && /raiffeisen/i.test(x.name); }), function () { return true; });
   var rbOut = sum(rb, function (x) { return x.typ !== 'Příjem'; });
-  return { b: b, trv: trv, poh: poh, prijmy: prijmy, odhad: odhad, trvSum: trvSum, vydaje: vydaje, zbyva: prijmy - trvSum - vydaje,
+  return { b: b, trv: trv, poh: poh, prijmy: prijmy, vyplata: vyplata, bilance: naSp - zeSp, odhad: odhad, trvSum: trvSum, vydaje: vydaje, zbyva: prijmy - trvSum - vydaje,
            naSp: naSp, zeSp: zeSp, cats: cats, rb: rb, rbIn: rbIn, rbOut: rbOut };
 }
 function mesicHtml(M, opts) {
-  var curKey = mPeriodKey(M.dnes, M.vyplataDen);
+  var curKey = mPeriodKey(M.dnes, M);
   var key = window.MPER || curKey;
   var C = mesicCalc(M, key);
   var keys = [];
@@ -357,12 +380,16 @@ function mesicHtml(M, opts) {
     h += '<option value="' + k + '"' + (k === key ? ' selected' : '') + '>' + MONTHS[q[1] - 1] + ' ' + q[0] + (k === curKey ? ' (aktuální)' : '') + '</option>';
   });
   h += '</select></div></div>';
+  var P = mesicCalc(M, prevKey(key));
+  var vypDiff = C.vyplata && P.vyplata ? C.vyplata - P.vyplata : null;
   h += '<div class="mtiles">' +
-    mt('Výplata / příjmy', kc(C.prijmy) + (C.odhad ? ' <span class="small muted">odhad</span>' : ''), 'var(--green)') +
+    mt('Výplata / příjmy', kc(C.prijmy) + (C.odhad ? ' <span class="small muted">odhad</span>' : '') +
+      (vypDiff !== null ? '<span class="small ' + cls(vypDiff) + '" style="display:block">' + (vypDiff ? sk(vypDiff) : 'stejně') + ' proti minulé výplatě</span>' : ''), 'var(--green)') +
     mt('Trvalé platby z výplaty', '−' + kc(C.trvSum), 'var(--ink)') +
     mt('Ostatní výdaje', '−' + kc(C.vydaje), C.vydaje ? 'var(--red)' : 'var(--ink)') +
+    mt('Na spořicí od výplaty', sk(C.bilance) + '<span class="small muted" style="display:block">minulé období ' + sk(P.bilance) + '</span>', C.bilance >= 0 ? 'var(--green)' : 'var(--red)') +
     mt('Spořicí účet ČS teď', kc(M.sporici), 'var(--c-blue)') +
-    mt('Zbývá', sk(C.zbyva), C.zbyva >= 0 ? 'var(--green)' : 'var(--red)') + '</div>';
+    mt('Zbývá z výplaty', sk(C.zbyva), C.zbyva >= 0 ? 'var(--green)' : 'var(--red)') + '</div>';
   var naBeznem = C.zbyva - (C.naSp - C.zeSp);
   h += '<div class="small muted">Zbývá ' + sk(C.zbyva) + ' = na spořicím z tohoto období <b class="num ' + cls(C.naSp - C.zeSp) + '">' + sk(C.naSp - C.zeSp) + '</b> + na běžném účtu <b class="num ' + cls(naBeznem) + '">' + sk(naBeznem) + '</b>' +
     (C.odhad ? ' (výplata je zatím jen odhad)' : '') + '.</div>';
@@ -429,7 +456,7 @@ function pTypChange() {
 function pickPeriod() { window.MPER = document.getElementById('mPer').value; render(LAST); }
 function prefillVyplata() {
   if (!document.getElementById('pD') && window.UI) { UI.zsub = 'platby'; setTab('zapis'); }
-  var b = mPeriodBounds(window.MPER || mPeriodKey(LAST.mesic.dnes, LAST.mesic.vyplataDen), LAST.mesic.vyplataDen);
+  var b = mPeriodBounds(window.MPER || mPeriodKey(LAST.mesic.dnes, LAST.mesic), LAST.mesic);
   document.getElementById('pD').value = b.start; document.getElementById('pN').value = 'Výplata';
   document.getElementById('pA').value = LAST.mesic.vyplataOcekavana ? nf.format(LAST.mesic.vyplataOcekavana) : '';
   document.getElementById('pT').value = 'Příjem'; document.getElementById('pA').focus();
@@ -442,7 +469,7 @@ function addP() {
   if (typ === 'Ze spořicího' && !document.getElementById('pN').value) { st.textContent = 'U výdaje ze spořicího napiš, za co to bylo.'; st.className = 'status err'; return; }
   var data = { datum: d, popis: document.getElementById('pN').value, castka: Math.abs(a), typ: typ,
                kategorie: document.getElementById('pK').value, poznamka: '' };
-  window.MPER = mPeriodKey(d, LAST.mesic.vyplataDen);
+  window.MPER = mPeriodKey(d, LAST.mesic);
   btn.disabled = true; st.textContent = 'Ukládám…'; st.className = 'status';
   if (window.MOCK_DATA) {
     LAST.mesic.pohyby.push({ datum: d, popis: data.popis, castka: data.castka, typ: data.typ, kategorie: data.kategorie, poznamka: '', id: String(Math.random()) });
