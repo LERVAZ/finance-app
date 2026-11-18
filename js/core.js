@@ -386,7 +386,8 @@ function mesicHtml(M, opts) {
     mt('Výplata / příjmy', kc(C.prijmy) + (C.odhad ? ' <span class="small muted">odhad</span>' : '') , 'var(--green)') +
     mt('Trvalé platby (odešlo)', '−' + kc(C.trvDone) + (C.trvDone < C.trvSum ? '<span class="small muted" style="display:block">ještě čeká −' + kc(C.trvSum - C.trvDone) + '</span>' : ''), 'var(--ink)') +
     mt('Ostatní výdaje', '−' + kc(C.vydaje), C.vydaje ? 'var(--red)' : 'var(--ink)') +
-    mt('Zbývá z výplaty', sk(C.zbyvaTed) + '<span class="small muted" style="display:block">' + (C.trvDone < C.trvSum ? 'po všech trvalých ' + sk(C.zbyva) + ' · ' : '') + 'minulé období ' + sk(P.zbyvaTed) + '</span>', C.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
+    mt('Minulé období', sk(P.zbyvaTed) + '<span class="small muted" style="display:block">' + (P.zbyvaTed < 0 ? 'utraceno navíc' : 'zbylo') + ' · ' + esc(P.b.label) + '</span>', P.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
+    mt('Zbývá z výplaty teď', sk(C.zbyvaTed) + (C.trvDone < C.trvSum ? '<span class="small muted" style="display:block">po všech trvalých ' + sk(C.zbyva) + '</span>' : ''), C.zbyvaTed >= 0 ? 'var(--green)' : 'var(--red)') +
     mt('Na spořicí přibylo', sk(C.bilance), C.bilance >= 0 ? 'var(--c-blue)' : 'var(--red)') +
     mt('Spořicí účet ČS teď', kc(M.sporici), 'var(--c-blue)') + '</div>';
   var naBeznem = C.zbyva - (C.naSp - C.zeSp);
